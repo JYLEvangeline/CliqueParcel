@@ -1,6 +1,6 @@
 for i in {10..10}; do 
 python gpt_efficiency_main.py --dataset trec --model gpt-3.5-turbo --mode group --i_th_experiment "${i}.query_length"
-python gpt_efficiency_main.py --dataset trec --model gpt-3.5-turbo --mode seperate --i_th_experiment "${i}.query_length"
+python gpt_efficiency_main.py --dataset trec --model gpt-3.5-turbo --mode sequence --i_th_experiment "${i}.query_length"
 python gpt_efficiency_main.py --dataset trec --model gpt-3.5-turbo --mode random --i_th_experiment "${i}.query_length"
 python gpt_efficiency_main.py --dataset trec --model gpt-3.5-turbo --mode semantic_sim --i_th_experiment "${i}.query_length"
 python gpt_efficiency_main.py --dataset trec --model gpt-3.5-turbo --mode concept_plus_semantic_sim --i_th_experiment "${i}.query_length"
@@ -12,7 +12,7 @@ python gpt_efficiency_main.py --dataset trec --model gpt-3.5-turbo --mode full_r
 
 
 python gpt_efficiency_main.py --dataset trec --model gpt-4 --mode group --i_th_experiment "${i}.query_length"
-python gpt_efficiency_main.py --dataset trec --model gpt-4 --mode seperate --i_th_experiment "${i}.query_length"
+python gpt_efficiency_main.py --dataset trec --model gpt-4 --mode sequence --i_th_experiment "${i}.query_length"
 python gpt_efficiency_main.py --dataset trec --model gpt-4 --mode random --i_th_experiment "${i}.query_length"
 python gpt_efficiency_main.py --dataset trec --model gpt-4 --mode semantic_sim --i_th_experiment "${i}.query_length"
 python gpt_efficiency_main.py --dataset trec --model gpt-4 --mode concept_plus_semantic_sim --i_th_experiment "${i}.query_length"
@@ -24,7 +24,7 @@ python gpt_efficiency_main.py --dataset trec --model gpt-4 --mode full_random --
 
 
 python gpt_efficiency_main.py --dataset squad --model gpt-3.5-turbo --mode group --i_th_experiment "${i}.query_length"
-python gpt_efficiency_main.py --dataset squad --model gpt-3.5-turbo --mode seperate --i_th_experiment "${i}.query_length"
+python gpt_efficiency_main.py --dataset squad --model gpt-3.5-turbo --mode sequence --i_th_experiment "${i}.query_length"
 python gpt_efficiency_main.py --dataset squad --model gpt-3.5-turbo --mode random --i_th_experiment "${i}.query_length"
 python gpt_efficiency_main.py --dataset squad --model gpt-3.5-turbo --mode semantic_sim --i_th_experiment "${i}.query_length"
 python gpt_efficiency_main.py --dataset squad --model gpt-3.5-turbo --mode concept_plus_semantic_sim --i_th_experiment "${i}.query_length"
@@ -36,7 +36,7 @@ python gpt_efficiency_main.py --dataset squad --model gpt-3.5-turbo --mode full_
 
 
 python gpt_efficiency_main.py --dataset squad --model gpt-4 --mode group --i_th_experiment "${i}.query_length"
-python gpt_efficiency_main.py --dataset squad --model gpt-4 --mode seperate --i_th_experiment "${i}.query_length"
+python gpt_efficiency_main.py --dataset squad --model gpt-4 --mode sequence --i_th_experiment "${i}.query_length"
 python gpt_efficiency_main.py --dataset squad --model gpt-4 --mode random --i_th_experiment "${i}.query_length"
 python gpt_efficiency_main.py --dataset squad --model gpt-4 --mode semantic_sim --i_th_experiment "${i}.query_length"
 python gpt_efficiency_main.py --dataset squad --model gpt-4 --mode concept_plus_semantic_sim --i_th_experiment "${i}.query_length"
@@ -48,7 +48,7 @@ python gpt_efficiency_main.py --dataset squad --model gpt-4 --mode full_random -
 
 
 python gpt_efficiency_main.py --dataset hotpot_qa --model gpt-3.5-turbo --mode group --i_th_experiment "${i}.query_length"
-python gpt_efficiency_main.py --dataset hotpot_qa --model gpt-3.5-turbo --mode seperate --i_th_experiment "${i}.query_length"
+python gpt_efficiency_main.py --dataset hotpot_qa --model gpt-3.5-turbo --mode sequence --i_th_experiment "${i}.query_length"
 python gpt_efficiency_main.py --dataset hotpot_qa --model gpt-3.5-turbo --mode random --i_th_experiment "${i}.query_length"
 python gpt_efficiency_main.py --dataset hotpot_qa --model gpt-3.5-turbo --mode semantic_sim --i_th_experiment "${i}.query_length"
 python gpt_efficiency_main.py --dataset hotpot_qa --model gpt-3.5-turbo --mode concept_plus_semantic_sim --i_th_experiment "${i}.query_length"
@@ -60,7 +60,7 @@ python gpt_efficiency_main.py --dataset hotpot_qa --model gpt-3.5-turbo --mode f
 
 
 python gpt_efficiency_main.py --dataset hotpot_qa --model gpt-4 --mode group --i_th_experiment "${i}.query_length"
-python gpt_efficiency_main.py --dataset hotpot_qa --model gpt-4 --mode seperate --i_th_experiment "${i}.query_length"
+python gpt_efficiency_main.py --dataset hotpot_qa --model gpt-4 --mode sequence --i_th_experiment "${i}.query_length"
 python gpt_efficiency_main.py --dataset hotpot_qa --model gpt-4 --mode random --i_th_experiment "${i}.query_length"
 python gpt_efficiency_main.py --dataset hotpot_qa --model gpt-4 --mode semantic_sim --i_th_experiment "${i}.query_length"
 python gpt_efficiency_main.py --dataset hotpot_qa --model gpt-4 --mode concept_plus_semantic_sim --i_th_experiment "${i}.query_length"
