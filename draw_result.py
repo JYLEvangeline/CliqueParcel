@@ -31,7 +31,7 @@ def parse_arguments():
 
 # modes = ["seperate", "group", "random", "semantic_sim", "concept_plus_semantic_sim"]
 dic_length_of_quires = {'trec': 64, 'squad': 16, 'hotpot_qa': 4}
-modes =["seperate", "group", "random", "full_random", "semantic_sim", "concept_plus_semantic_sim", "avg_length", "maximum_diff", 'random_plus_avg_length']
+modes =["seperate", "group", "sequence", "full_random", "semantic_sim", "concept_plus_semantic_sim", "avg_length", "maximum_diff", 'random_plus_avg_length']
 tmp_modes = "CC & SC     & RC & SSC  & CpSC & ALC    & MDC & SpALC".split('&')
 tmp_modes = [m.strip() for m in tmp_modes]
 seperate_index = modes.index('seperate')
