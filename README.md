@@ -20,3 +20,11 @@ If you want to resume the previous experiment, please run
 $ python gpt_efficiency_main.py --dataset trec --model gpt-4 --mode random --resume True
 ```
 
+To visualize the results, please run
+
+```
+$ python draw_result.py
+```
+
+The manually labeled results for TREC are presented in output_trec.csv 
+
