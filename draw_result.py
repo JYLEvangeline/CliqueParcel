@@ -524,7 +524,6 @@ def analyze_res(args, i_th_experiment):
     print('completeness')
     print(args.dataset + ' ' + args.model + '&' + '&'.join(print_com))
 
-    return 
     # draw tokens
     file_name = str(args.length_num) + '/token_length:' + '_'.join([args.model, args.dataset, args.label, i_th_experiment + str(args.length_of_quries)])
     # data = [[sum(i[0]), sum(i[1])] for i in length_dicts.values()]
