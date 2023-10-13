@@ -20,7 +20,7 @@ def parse_arguments():
     parser.add_argument("--length_num", type = int, default = 256)
     parser.add_argument("--dataset", default = "hotpot_qa", choices = ["trec","squad","hotpot_qa"])
     parser.add_argument("--model", default = "gpt-3.5-turbo", choices = ["gpt-3.5-turbo", "gpt-4"])
-    parser.add_argument("--mode", default = "avg_length", choices = ["group", "seperate", "random", "full_random", "semantic_sim", "concept_plus_semantic_sim", "avg_length", "seq_length", "maximum_diff", 'random_plus_avg_length'])
+    parser.add_argument("--mode", default = "avg_length", choices = ["group", "seperate", "sequence", "full_random", "semantic_sim", "concept_plus_semantic_sim", "avg_length", "seq_length", "maximum_diff", 'random_plus_avg_length'])
     parser.add_argument("--i_th_experiment", type = str, default = "10.query_length")
     parser.add_argument("--resume", type = bool, default = False)
     args = parser.parse_args()
@@ -176,7 +176,7 @@ def get_time_for_a_list_of_sentences(args):
             total_time_group, exception_or_not  = run_prompt(grouped_sentences, args.model, file_groups_name)
             total_time.append(total_time_group)
 
-    if args.mode == "random":
+    if args.mode == "sequence":
         # process them with a random group
         file_random_name = "efficiency_res/" + args_file_name + "/random" + ".txt"
         if args.resume == True:
