@@ -25,7 +25,7 @@ def parse_arguments():
     # Comprehension: SQUAD, hotpot_qa
     # MATH inference: GSM8K, MATH
     parser.add_argument("--model", default = "gpt-3.5-turbo", choices = ["gpt-3.5-turbo", "gpt-4"])
-    parser.add_argument("--mode", default = "maximum_diff", choices = ["group", "seperate", "random", "full_random", "semantic_sim", "concept_plus_semantic_sim", "avg_length", "seq_length", "maximum_diff", 'random_plus_avg_length'])
+    parser.add_argument("--mode", default = "maximum_diff", choices = ["group", "seperate", "full_random", "semantic_sim", "concept_plus_semantic_sim", "avg_length", "seq_length", "maximum_diff", 'random_plus_avg_length'])
     parser.add_argument("--i_th_experiment", type = str, default = "12.query_length")
     parser.add_argument("--resume", type = bool, default = True)
     args = parser.parse_args()
