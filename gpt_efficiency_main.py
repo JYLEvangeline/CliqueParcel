@@ -9,7 +9,9 @@ import numpy as np
 import openai
 import random
 
-openai.api_key="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"
+pre_defined_added_string= "Return the answer of each question with their numerical itemize.\n " 
+pre_defined_added_string = "Return the answer of each question with their numerical itemize. You must return with numerical itemize!! Remember to start the answer of each question with 1. xxx\n 2. xxx\n ... \n "# new dataset gpt 3.5
+openai.api_key= "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"
 datasets.logging.set_verbosity_error()
 datasets.logging.disable_progress_bar()
 def parse_arguments():
@@ -18,14 +20,16 @@ def parse_arguments():
     parser.add_argument("--random_seed", type=int, default=42, help="random seed")
     parser.add_argument("--label", type = str, default = "coarse_label") # coarse_label, fine_label for trec
     parser.add_argument("--length_num", type = int, default = 256)
-    parser.add_argument("--dataset", default = "hotpot_qa", choices = ["trec","squad","hotpot_qa"])
+    parser.add_argument("--dataset", default = "MMLU", choices = ["trec","squad","hotpot_qa", "CSQA", "GSM8K","MATH", "ANLI", "MMLU"])
+    # dataset :
+    # Comprehension: SQUAD, hotpot_qa
+    # MATH inference: GSM8K, MATH
     parser.add_argument("--model", default = "gpt-3.5-turbo", choices = ["gpt-3.5-turbo", "gpt-4"])
-    parser.add_argument("--mode", default = "avg_length", choices = ["group", "seperate", "sequence", "full_random", "semantic_sim", "concept_plus_semantic_sim", "avg_length", "seq_length", "maximum_diff", 'random_plus_avg_length'])
-    parser.add_argument("--i_th_experiment", type = str, default = "10.query_length")
-    parser.add_argument("--resume", type = bool, default = False)
+    parser.add_argument("--mode", default = "maximum_diff", choices = ["group", "seperate", "random", "full_random", "semantic_sim", "concept_plus_semantic_sim", "avg_length", "seq_length", "maximum_diff", 'random_plus_avg_length'])
+    parser.add_argument("--i_th_experiment", type = str, default = "12.query_length")
+    parser.add_argument("--resume", type = bool, default = True)
     args = parser.parse_args()
     return args
-
 
 
 def group_strings(strings, group_size, added_string = ""):
@@ -95,8 +99,8 @@ def get_dataset_prompts(random_seed = 42, dataset_description = {"name":"trec", 
         random_sample_tmp = random.sample(list(train_dataset), length_num)
         # add coarse label to random_sample
         dictionary = {'comparison':0, 'bridge':1}
-        # add text to random_sample
-        q = [random_sample_tmp[0]['context']['sentences'][id] for id in random_sample_tmp[0]['supporting_facts']['sent_id']]
+        # add text to random_sample  jy check
+        # q = [random_sample_tmp[0]['context']['sentences'][id] for id in random_sample_tmp[0]['supporting_facts']['sent_id']]
 
         random_sample = [{'text': short_answer + ' '.join([' '.join(qq) for qq in [item['context']['sentences'][id] for id in item['supporting_facts']['sent_id']]])
                            + item['question'], 
@@ -106,12 +110,93 @@ def get_dataset_prompts(random_seed = 42, dataset_description = {"name":"trec", 
         merged_prompts = merge_dataset_by_label(random_sample, "coarse_label", "text")
         non_merged_prompts = [aa['text'] for aa in random_sample]
         answer = {qa["text"]: qa['answer'] for qa in random_sample}
-        
+    if dataset_description['name'] == 'CSQA':
+        dataset = load_dataset('commonsense_qa')
+        train_dataset = dataset["validation"] 
+        length_num = dataset_description["length_num"]
+        random_sample_tmp = random.sample(list(train_dataset), length_num)
+        # no coarse label
+        dictionary = {'NA':0}
+        # add text to random_sample
+        # q = [for random_sample_i in random_sample_tmp]
+        random_sample = [{'text': random_sample_i['question'] + ' Select your answer from following options. The format should be "The answer is xxx"\n' + 
+                          '\n'.join([f'{label}: {text}' for 
+                                     label, text in zip(random_sample_i['choices']['label'], random_sample_i['choices']['text'])]) , 
+                           'answer': [random_sample_i['choices']['text'][random_sample_i['choices']['label'].index(random_sample_i['answerKey'])]],  # ['relaxation']
+                           'coarse_label': 0} 
+                           for random_sample_i in random_sample_tmp]
+        merged_prompts = merge_dataset_by_label(random_sample, "coarse_label", "text")
+        non_merged_prompts = [aa['text'] for aa in random_sample]
+        answer = {qa["text"]: qa['answer'] for qa in random_sample}
+    if dataset_description['name'] == 'GSM8K':
+        dataset = load_dataset('gsm8k','main')
+        train_dataset = dataset["test"] 
+        length_num = dataset_description["length_num"]
+        random_sample_tmp = random.sample(list(train_dataset), length_num)
+        # no coarse label
+        dictionary = {'NA':0}
+        # add text to random_sample
+        # q = [for random_sample_i in random_sample_tmp]
+        random_sample = [{'text': random_sample_i['question'] + ' '  + 'The answer should start with "The answer is xxx"', 
+                           'answer': random_sample_i['answer'].split("\n####")[-1].strip(), 
+                           'coarse_label': 0} 
+                           for random_sample_i in random_sample_tmp]
+        merged_prompts = merge_dataset_by_label(random_sample, "coarse_label", "text")
+        non_merged_prompts = [aa['text'] for aa in random_sample]
+        answer = {qa["text"]: qa['answer'] for qa in random_sample}
+    if dataset_description['name'] == 'MATH':
+        dataset = load_dataset('math_dataset', 'arithmetic__mixed')
+        train_dataset = dataset["test"] 
+        length_num = dataset_description["length_num"]
+        random_sample_tmp = random.sample(list(train_dataset), length_num)
+        # no coarse label
+        dictionary = {'NA':0}
+        # add text to random_sample
+        # q = [for random_sample_i in random_sample_tmp]
+        random_sample = [{'text': random_sample_i['question'] + 
+                          ' The answer should start with "The answer is xxx"\n', 
+                           'answer': [str(round(eval(random_sample_i['answer'].strip("b'\\n")), round_num)) for round_num in [0,1,2,3]], 
+                           'coarse_label': 0} 
+                           for random_sample_i in random_sample_tmp]
+        merged_prompts = merge_dataset_by_label(random_sample, "coarse_label", "text")
+        non_merged_prompts = [aa['text'] for aa in random_sample]
+        answer = {qa["text"]: qa['answer'] for qa in random_sample}
+    if dataset_description['name'] == 'ANLI':
+        dataset = load_dataset('anli')
+        train_dataset = dataset["test_r1"] 
+        length_num = dataset_description["length_num"]
+        random_sample_tmp = random.sample(list(train_dataset), length_num)
+        # no coarse label
+        dictionary = {'NA':0}
+        # add text to random_sample
+        # q = [for random_sample_i in random_sample_tmp]
+        answer_dict = {0: 'entailment', 1: 'neural', 2: 'contradiction'}
+        random_sample = [{'text': f'Suppose the premise is {random_sample_i["premise"]}. The hypothesis is {random_sample_i["hypothesis"]} What is the relationship between hypothesis and premise? Contradiction, entailment or neural?', 
+                           'answer': answer_dict[random_sample_i['label']], 
+                           'coarse_label': 0} 
+                           for random_sample_i in random_sample_tmp]
+        merged_prompts = merge_dataset_by_label(random_sample, "coarse_label", "text")
+        non_merged_prompts = [aa['text'] for aa in random_sample]
+        answer = {qa["text"]: qa['answer'] for qa in random_sample}
+    if dataset_description['name'] == 'MMLU':
+        dataset = load_dataset("lukaemon/mmlu","elementary_mathematics", split = "test")
+        train_dataset = dataset
+        length_num = dataset_description["length_num"]
+        random_sample_tmp = random.sample(list(train_dataset), length_num)
+        # no coarse label
+        dictionary = {'NA':0}
+        choices = ['A','B','C','D']
+        # add text to random_sample
+        # q = [for random_sample_i in random_sample_tmp]
+        random_sample = [{'text': random_sample_i['input'] + ' Select your answer from following options: ' + '; '.join([f'{choice}: {random_sample_i[choice]}' for choice in choices]) + 'The answer should start with "The answer is xxx"\n', 
+                           'answer': random_sample_i[random_sample_i['target']], 
+                           'coarse_label': 0} 
+                           for random_sample_i in random_sample_tmp]
+        merged_prompts = merge_dataset_by_label(random_sample, "coarse_label", "text")
+        non_merged_prompts = [aa['text'] for aa in random_sample]
+        answer = {qa["text"]: qa['answer'] for qa in random_sample}
+
     return merged_prompts, non_merged_prompts, answer
-
-
-
-
 
 
 def get_time_for_a_list_of_sentences(args):
@@ -126,7 +211,7 @@ def get_time_for_a_list_of_sentences(args):
     Returns:
         _type_: _description_
     """
-    dic_length_of_quires = {'trec': 64, 'squad': 16, 'hotpot_qa': 8}
+    dic_length_of_quires = {'trec': 64, 'squad': 16, 'hotpot_qa': 8, 'CSQA': 32, 'GSM8K': 16, 'MATH': 32, 'ANLI': 4, 'MMLU': 16}
     label = args.label
     if args.dataset == "trec":
         dataset_description = {"name":"trec", "label":label, "length_num": args.length_num}
@@ -137,6 +222,21 @@ def get_time_for_a_list_of_sentences(args):
     elif args.dataset == 'hotpot_qa':
         dataset_description = {"name":"hotpot_qa", "length_num": args.length_num}
         args.length_of_quries = 4
+    elif args.dataset == 'CSQA':
+        dataset_description = {"name":"CSQA", "length_num": args.length_num}
+        args.length_of_quries = 32
+    elif args.dataset == 'GSM8K':
+        dataset_description = {"name":"GSM8K", "length_num": args.length_num}
+        args.length_of_quries = 16
+    elif args.dataset == 'MATH':
+        dataset_description = {"name":"MATH", "length_num": args.length_num}
+        args.length_of_quries = 32
+    elif args.dataset == 'ANLI':
+        dataset_description = {"name":"ANLI", "length_num": args.length_num}
+        args.length_of_quries = 4
+    elif args.dataset == "MMLU":
+        dataset_description = {"name":"MMLU", "length_num": args.length_num}
+        args.length_of_quries = 16
     
     args.length_of_quries = dic_length_of_quires[args.dataset]
     # jy: move later
@@ -172,11 +272,11 @@ def get_time_for_a_list_of_sentences(args):
                 # if there doesn't exist a check_point, then we could skip this part
                 if check_point == None:
                     continue
-            grouped_sentences = group_strings(sentences, length_of_quries, added_string= "Return the answer of each question with their numerical itemize.\n ")
+            grouped_sentences = group_strings(sentences, length_of_quries, added_string= pre_defined_added_string)
             total_time_group, exception_or_not  = run_prompt(grouped_sentences, args.model, file_groups_name)
             total_time.append(total_time_group)
 
-    if args.mode == "sequence":
+    if args.mode == "random":
         # process them with a random group
         file_random_name = "efficiency_res/" + args_file_name + "/random" + ".txt"
         if args.resume == True:
@@ -185,7 +285,7 @@ def get_time_for_a_list_of_sentences(args):
             # if there doesn't exist a check_point, then we could skip this part
             if check_point == None:
                 return 0, False
-        grouped_sentences = group_strings(non_merged_prompts, length_of_quries, added_string= "Return the answer of each question with their numerical itemize.\n ")
+        grouped_sentences = group_strings(non_merged_prompts, length_of_quries, added_string= pre_defined_added_string)
         
         total_time_random, exception_or_not = run_prompt(grouped_sentences, args.model, file_random_name)
         total_time.append(total_time_random)
@@ -200,7 +300,7 @@ def get_time_for_a_list_of_sentences(args):
             if check_point == None:
                 return 0, False
         full_random_prompts = random.sample(non_merged_prompts, len(non_merged_prompts))
-        grouped_sentences = group_strings(full_random_prompts, length_of_quries, added_string= "Return the answer of each question with their numerical itemize.\n ")
+        grouped_sentences = group_strings(full_random_prompts, length_of_quries, added_string= pre_defined_added_string)
         
         total_time_random, exception_or_not = run_prompt(grouped_sentences, args.model, file_random_name)
         total_time.append(total_time_random)
@@ -215,7 +315,7 @@ def get_time_for_a_list_of_sentences(args):
             if check_point == None:
                 return 0, False
         sentences = cluster_sentences(non_merged_prompts, cluster_size = args.length_of_quries)
-        grouped_sentences = group_strings(sentences, length_of_quries, added_string= "Return the answer of each question with their numerical itemize.\n ")
+        grouped_sentences = group_strings(sentences, length_of_quries, added_string= pre_defined_added_string)
         
         total_time_random, exception_or_not = run_prompt(grouped_sentences, args.model, file_random_name)
         total_time.append(total_time_random)
@@ -236,7 +336,7 @@ def get_time_for_a_list_of_sentences(args):
             except:
                 # not enough for clustering
                 sentences = sentences
-            grouped_sentences = group_strings(sentences, length_of_quries, added_string= "Return the answer of each question with their numerical itemize.\n ")
+            grouped_sentences = group_strings(sentences, length_of_quries, added_string= pre_defined_added_string)
             total_time_group, exception_or_not  = run_prompt(grouped_sentences, args.model, file_groups_name)
             total_time.append(total_time_group)
     if args.mode == "avg_length":
@@ -252,7 +352,7 @@ def get_time_for_a_list_of_sentences(args):
         sorted_non_merged_prompts_length = sorted(non_merged_prompts_length, key=lambda x: x[0])
         sorted_non_merged_prompts = [prompts[1] for prompts in sorted_non_merged_prompts_length]
         reordered_non_merged_prompts = custom_reorder_list(sorted_non_merged_prompts)
-        grouped_sentences = group_strings(reordered_non_merged_prompts, length_of_quries, added_string= "Return the answer of each question with their numerical itemize.\n ")
+        grouped_sentences = group_strings(reordered_non_merged_prompts, length_of_quries, added_string= pre_defined_added_string)
         file_random_name = "efficiency_res/" + args_file_name + "/avg_length" + ".txt"
         total_time_random, exception_or_not = run_prompt(grouped_sentences, args.model, file_random_name, resume = args.resume)
         total_time.append(total_time_random)
@@ -268,7 +368,7 @@ def get_time_for_a_list_of_sentences(args):
         non_merged_prompts_length = [[len(prompts.split()), prompts] for prompts in non_merged_prompts]
         sorted_non_merged_prompts_length = sorted(non_merged_prompts_length, key=lambda x: x[0])
         sorted_non_merged_prompts = [prompts[1] for prompts in sorted_non_merged_prompts_length]
-        grouped_sentences = group_strings(sorted_non_merged_prompts, length_of_quries, added_string= "Return the answer of each question with their numerical itemize.\n ")
+        grouped_sentences = group_strings(sorted_non_merged_prompts, length_of_quries, added_string= pre_defined_added_string)
         file_random_name = "efficiency_res/" + args_file_name + "/seq_length" + ".txt"
         total_time_random, exception_or_not = run_prompt(grouped_sentences, args.model, file_random_name, resume = args.resume)
         total_time.append(total_time_random)
@@ -282,7 +382,7 @@ def get_time_for_a_list_of_sentences(args):
             if check_point == None:
                 return 0, False
         sentences = cluster_sentences(non_merged_prompts, cluster_size = args.length_of_quries, minimize = False)
-        grouped_sentences = group_strings(sentences, length_of_quries, added_string= "Return the answer of each question with their numerical itemize.\n ")
+        grouped_sentences = group_strings(sentences, length_of_quries, added_string= pre_defined_added_string)
         total_time_random, exception_or_not = run_prompt(grouped_sentences, args.model, file_random_name, resume = args.resume)
         total_time.append(total_time_random)
     if args.mode == "random_plus_avg_length":
@@ -302,7 +402,7 @@ def get_time_for_a_list_of_sentences(args):
         sorted_random_non_merged_prompts = [[prompt[1] for prompt in prompts] for prompts in sorted_random_non_merged_prompts_length]
         reordered_random_non_merged_prompts = [custom_reorder_list(l) for l in sorted_random_non_merged_prompts]
         reordered_random_non_merged_prompts = [item for sublist in reordered_random_non_merged_prompts for item in sublist]
-        grouped_sentences = group_strings(reordered_random_non_merged_prompts, length_of_quries, added_string= "Return the answer of each question with their numerical itemize.\n ")
+        grouped_sentences = group_strings(reordered_random_non_merged_prompts, length_of_quries, added_string= pre_defined_added_string)
         total_time_random, exception_or_not = run_prompt(grouped_sentences, args.model, file_random_name, resume = args.resume)
         total_time.append(total_time_random)
     return total_time, exception_or_not
@@ -320,12 +420,3 @@ def main():
     
 if __name__ == '__main__':
     main()
-# t1, t2 = [], []
-# for i in range(50):
-#     total_time1, total_time2 = main()
-#     t1.append(total_time1)
-#     t2.append(total_time2)
-# print(t1)
-# print(t2)
-# print(np.mean(t1))
-# print(np.mean(t2))
