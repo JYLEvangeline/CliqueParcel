@@ -22,7 +22,7 @@ def parse_arguments():
     parser.add_argument("--label", type = str, default = "coarse_label")
     parser.add_argument("--dataset", default = "squad", choices = ["trec","squad","hotpot_qa"])
     parser.add_argument("--model", type = str, default = "gpt-4")
-    parser.add_argument("--i_th_experiment", type = str, default = "10.query_length")
+    parser.add_argument("--i_th_experiment", type = str, default = "12.query_length")
     parser.add_argument("--length_num", type = int, default = 256)
     args = parser.parse_args()
     return args
@@ -31,13 +31,13 @@ def parse_arguments():
 
 # modes = ["seperate", "group", "random", "semantic_sim", "concept_plus_semantic_sim"]
 dic_length_of_quires = {'trec': 64, 'squad': 16, 'hotpot_qa': 4}
-modes =["seperate", "group", "sequence", "full_random", "semantic_sim", "concept_plus_semantic_sim", "avg_length", "maximum_diff", 'random_plus_avg_length']
+dic_length_of_quires = {'trec': 64, 'squad': 16, 'hotpot_qa': 8, 'CSQA': 32, 'GSM8K': 16, 'MATH': 32, 'ANLI': 4, 'MMLU': 16} # hotpotqa 8 or 4?
+modes =["seperate", "group", "random", "full_random", "semantic_sim", "concept_plus_semantic_sim", "avg_length", "maximum_diff", 'random_plus_avg_length'] # remove semantic sim debug
 tmp_modes = "CC & SC     & RC & SSC  & CpSC & ALC    & MDC & SpALC".split('&')
 tmp_modes = [m.strip() for m in tmp_modes]
 seperate_index = modes.index('seperate')
 key_for_label = {"coarse_label": 6, "fine_label": 50}
 args = parse_arguments()
-# pre_time_result = load_variable_from_pickle('length_' + str(args.length_of_quries)+'_pre_time_caculator.pickle')
 
 
 def trec_pattern(input_string):
@@ -193,7 +193,7 @@ def lineplot(categories, data, labels, file_name, xlabel = "Methods", ylabel = "
     file_name = file_name.replace(".","_")
     n = len(data)  # Number of datasets
 
-
+    plt.style.use('ggplot')
     bar_width = 0.8/n # Width of each bar
     bar_positions = np.arange(len(categories))  # X positions of bars
 
@@ -302,6 +302,21 @@ def get_ground_truth(args):
         dataset_description = {"name":"squad", "length_num": args.length_num}
     elif args.dataset == 'hotpot_qa':
         dataset_description = {"name":"hotpot_qa", "length_num": args.length_num}
+    elif args.dataset == 'CSQA':
+        dataset_description = {"name":"CSQA", "length_num": args.length_num}
+        args.length_of_quries = 32
+    elif args.dataset == 'GSM8K':
+        dataset_description = {"name":"GSM8K", "length_num": args.length_num}
+        args.length_of_quries = 16
+    elif args.dataset == 'MATH':
+        dataset_description = {"name":"MATH", "length_num": args.length_num}
+        args.length_of_quries = 32
+    elif args.dataset == 'ANLI':
+        dataset_description = {"name":"ANLI", "length_num": args.length_num}
+        args.length_of_quries = 4
+    elif args.dataset == "MMLU":
+        dataset_description = {"name":"MMLU", "length_num": args.length_num}
+        args.length_of_quries = 16
     _, _, answer = get_dataset_prompts(dataset_description = dataset_description)
     return answer
     
@@ -348,7 +363,7 @@ def get_completeness(answer_dicts, accuracy):
         res.append(res_i)
     return [sum(np.array(res))/len(res)]
 
-def get_accuracy(ground_truth, answer_dicts, trec_or_not = False):
+def get_accuracy(ground_truth, answer_dicts, trec_or_not = False, dataset = None):
     """ get the accuracy of answers
 
     Args:
@@ -396,10 +411,13 @@ def get_accuracy(ground_truth, answer_dicts, trec_or_not = False):
     
     for i, question in enumerate(ground_truth):
         answer_ground_truth = ground_truth[question]
-        question = question.replace("O\n2","O2")
-        question = question.replace("O\n3","O3")
-        question = question.strip()
-        pattern = r'\b\d+\.\s'
+        if dataset in ["trec","squad","hotpot_qa"]:
+            question = question.replace("O\n2","O2")
+            question = question.replace("O\n3","O3")
+            question = question.strip()
+            pattern = r'\b\d+\.\s'
+        else:
+            question = question.replace("\n","")
         # question = re.sub(pattern, '', question.lstrip())
         for mode, qapairs_of_cur_mode in answer_dicts.items():
             if question in qapairs_of_cur_mode or question + ' ' in qapairs_of_cur_mode:
@@ -408,7 +426,10 @@ def get_accuracy(ground_truth, answer_dicts, trec_or_not = False):
                 try:
                     answer = qapairs_of_cur_mode[question]
                 except:
-                    answer = qapairs_of_cur_mode[question + ' ']
+                    try:
+                        answer = qapairs_of_cur_mode[question + ' ']
+                    except:
+                        answer = qapairs_of_cur_mode[question + '\n']
                 # check whether answer includes the ground truth
                 q = question if question in qapairs_of_cur_mode else question + ' '
                 for possible_answer in answer_ground_truth:
@@ -416,11 +437,10 @@ def get_accuracy(ground_truth, answer_dicts, trec_or_not = False):
                         res[mode] += 1
                         # for details
                         details[mode][q] = 1
-                    else:
                         break
                 
-            # else:
-            #     print(1)
+            else:
+                print(1)
 
     return {key: res[key] / total.get(key, 1) for key in res}, details
 
@@ -429,15 +449,18 @@ def get_accuracy(ground_truth, answer_dicts, trec_or_not = False):
 #     for sentence in sentences:
 #         embedding = model.encode(sentence)
 
-def analyze_res(args, i_th_experiment):
+def analyze_res(args, i_th_experiment, added_string = "Return the answer of each question with their numerical itemize. You must return with numerical itemize!!\n "):
+    pre_time_result = load_variable_from_pickle('length_' + str(args.length_of_quries)+'_pre_time_caculator.pickle')
     if args.dataset == 'hotpot_qa':
         if args.model == "gpt-3.5-turbo":
             args.length_of_quries = 4
         else:
             args.length_of_quries = 8
-    args_file_name = '/'.join([str(args.length_num), args.model, args.dataset, args.label, args.i_th_experiment + str(args.length_of_quries)])
-    
-    keys = key_for_label[args.label]
+    args_file_name = '/'.join([str(args.length_num), args.model, args.dataset, args.label, i_th_experiment + str(args.length_of_quries)])
+    if args.dataset in ['trec','hotpot_qa','squad']:
+        keys = key_for_label[args.label]
+    else:
+        keys = 1
     # parse txt file and get the answers
     answer_dicts = {}
     time_dicts = defaultdict(list)
@@ -445,15 +468,19 @@ def analyze_res(args, i_th_experiment):
     length_dicts = defaultdict(default_array)
     for mode in modes:
         answer_dict = {}
+        l = [0,0]
         # total_time_dicts[mode] += pre_time_result[args.dataset][args.length_num][mode]
-        # # add bert to group
+        # # # add bert to group
         # if mode == 'group':
-        #     total_time_dicts[mode] += pre_time_result[args.dataset][args.length_num]['semantic_sim']
+        #     #total_time_dicts[mode] += pre_time_result[args.dataset][args.length_num]['semantic_sim']
         if mode in ['group', 'seperate', 'concept_plus_semantic_sim']:
+            
             for key in range(keys):
                 file_path = "efficiency_res/" + args_file_name + "/" + mode + str(key) + ".txt"
                 try:
                     word_strings, answer_strings, time, total_time = extract_strings_from_tags(file_path)
+                    l[0] += sum([len(a.split()) for a in answer_strings])
+                    l[1] += len(answer_strings)
                 except:
                     continue
                 # get token_length results
@@ -463,8 +490,11 @@ def analyze_res(args, i_th_experiment):
                 # extra operations for grouped prompts
                 if mode == 'group' or mode == 'concept_plus_semantic_sim':
                     # remove number and flatten
-                    word_strings, tester_word_strings = remove_numbered_list(word_strings)
-                    answer_strings, tester_answer_strings = remove_numbered_list(answer_strings)                    
+                    word_strings, tester_word_strings = remove_numbered_list(word_strings, added_string = added_string) # jy: waiting to add
+                    answer_strings, tester_answer_strings = remove_numbered_list(answer_strings, length_of_quries = args.length_of_quries)     
+                if mode == 'seperate':
+                    word_strings = [w.replace("\n","") for w in word_strings]           
+                    answer_strings = [a.replace("\n","") for a in answer_strings]
                 # add word and answer to dict
                 if len(word_strings) != len(answer_strings):
                     word_strings, answer_strings = [], []
@@ -482,8 +512,8 @@ def analyze_res(args, i_th_experiment):
             length_dicts[mode] += np.array([sum([len(word_string.split()) for word_string in word_strings]), sum([len(answer_string.split()) for answer_string in answer_strings])])
             # extra operations for grouped prompts. Random and semantic_sim are both grouped prompts
             # remove number and flatten
-            word_strings, tester_word_strings = remove_numbered_list(word_strings)
-            answer_strings, tester_answer_strings = remove_numbered_list(answer_strings)
+            word_strings, tester_word_strings = remove_numbered_list(word_strings, added_string = added_string)
+            answer_strings, tester_answer_strings = remove_numbered_list(answer_strings, length_of_quries = args.length_of_quries)
             
             # add word and answer to dict
             if len(word_strings) != len(answer_strings):
@@ -499,17 +529,17 @@ def analyze_res(args, i_th_experiment):
 
     catogories = list(answer_dicts.keys())
     # draw accuracy between methods and ground truth
-    if args.dataset == "squad" or args.dataset == "hotpot_qa":
-        grond_truth = get_ground_truth(args)
-        res, details = get_accuracy(grond_truth, answer_dicts)
+    if args.dataset == "trec":
+        res, details = get_accuracy([], answer_dicts, trec_or_not = True, dataset = args.dataset)
     else:
-        res, details = get_accuracy([], answer_dicts, trec_or_not = True)
+        ground_truth = get_ground_truth(args)
+        res, details = get_accuracy(ground_truth, answer_dicts, dataset = args.dataset)
+        
     accuracy = [list(res.values())]
     maximum_index = list(accuracy[0]).index(max(accuracy[0])) #[1:] to remove seperate
     print_acc = [f"{round(num, 4):.4f}" for num in accuracy[0]]
     print_acc[maximum_index] = '\\textbf{' + print_acc[maximum_index] + '}'
-    # print('accuracy')
-    # print(args.dataset + ' ' + args.model + '&' + '&'.join(print_acc))
+    print(args.dataset + ' ' + args.model + '&' + '&'.join(print_acc))
 
     file_name =  str(args.length_num) + '/accuracy:' + '_'.join([args.model, args.dataset, args.label, i_th_experiment + str(args.length_of_quries)])
     barplot(catogories, accuracy, ['Accuracy'], file_name)
@@ -524,6 +554,7 @@ def analyze_res(args, i_th_experiment):
     print('completeness')
     print(args.dataset + ' ' + args.model + '&' + '&'.join(print_com))
 
+    # return 
     # draw tokens
     file_name = str(args.length_num) + '/token_length:' + '_'.join([args.model, args.dataset, args.label, i_th_experiment + str(args.length_of_quries)])
     # data = [[sum(i[0]), sum(i[1])] for i in length_dicts.values()]
@@ -553,7 +584,7 @@ def analyze_res(args, i_th_experiment):
     accuracy_ratio = np.array(accuracy)/accuracy[0][index_of_seperate]
     
     print("accuracy ratio")
-    print_acc = [f"{round(num, 2):.2f}" for num in accuracy_ratio[0]]
+    print_acc_ratio = [f"{round(num, 2):.2f}" for num in accuracy_ratio[0]]
     print('&'.join([f"{round(num, 2):.2f}" for num in accuracy_ratio[0]]))
     price_ratio = np.array(price)/price[0][index_of_seperate]
     running_time_ratio = np.array(running_time)/running_time[0][index_of_seperate]
@@ -576,13 +607,13 @@ def analyze_res(args, i_th_experiment):
     print('completeness')
     print(args.dataset + ' ' + args.model + '&' + '&'.join(print_cme))
 
-    # # draw distance between methods, too slow so commented, recover in future JY
+    # draw distance between methods, too slow so commented, recover in future JY
     similarity_res = compare_distance(answer_dicts)
     file_name = str(args.length_num) + '/heat_map:' + '_'.join([args.model, args.dataset, args.label, i_th_experiment + str(args.length_of_quries)])
     heatmap(similarity_res, file_name)
     
     
-    return total_time_dicts
+    return print_acc, print_eff, print_com
 
 def main():
     import warnings
@@ -595,21 +626,39 @@ def main():
     random.seed(args.random_seed)
     np.random.seed(args.random_seed)
     i_th_experiment = args.i_th_experiment
+    # pre-defines
     labels = {"trec": ["coarse_label", "fine_label"], "squad": ["coarse_label"]}
     labels = {"trec": ["coarse_label"], "squad": ["coarse_label"], "hotpot_qa": ["coarse_label"]}
+    labels = {'trec': ['coarse_label'], 'squad': ['coarse_label'], 'hotpot_qa': ['coarse_label'], 'CSQA': ['coarse_label'], 'GSM8K': ['coarse_label'], 'MATH': ['coarse_label'], 'ANLI': ['coarse_label'], 'MMLU': ['coarse_label']}
+    pre_defined_added_string = { "gpt-4" : "Return the answer of each question with their numerical itemize.\n " , "gpt-3.5-turbo": "Return the answer of each question with their numerical itemize. You must return with numerical itemize!! Remember to start the answer of each question with 1. xxx\n 2. xxx\n ... \n "}# new 
+    pre_defined_added_string = { "gpt-4" : "Return the answer of each question with their numerical itemize. You must return with numerical itemize!! Remember to start the answer of each question with 1. xxx\n 2. xxx\n ... \n " , "gpt-3.5-turbo": "Return the answer of each question with their numerical itemize. You must return with numerical itemize!! Remember to start the answer of each question with 1. xxx\n 2. xxx\n ... \n "}# new 
     plt.set_loglevel("error")
-    for dataset in ["trec", "squad", "hotpot_qa"]:
+    experiments = [f'{i}.query_length' for i in range(10, 13)]
+
+    for i_th_experiment in experiments:
+    # for dataset in ["trec", "squad", "hotpot_qa"]:
     # for dataset in ["hotpot_qa"]:
-        args.dataset = dataset
-        args.length_of_quries = dic_length_of_quires[args.dataset]
-        for model in ["gpt-4", "gpt-3.5-turbo"]:
-            args.model = model
-            for label in labels[args.dataset]:
-                print("\n")
-                print(args.dataset, model, label)
-                args.label = label
-                analyze_res(args, i_th_experiment)
-                total_time_dicts = analyze_res(args, i_th_experiment)
+    # for dataset in ["CSQA"]:
+        all_acc, all_eff, all_cme = {}, {}, {}
+        for dataset in ["CSQA", "GSM8K","MATH", "ANLI"]:
+            args.dataset = dataset
+            args.length_of_quries = dic_length_of_quires[args.dataset]
+            # for model in ["gpt-4"]:
+            for model in ["gpt-4", "gpt-3.5-turbo"]:
+                args.model = model
+                for label in labels[args.dataset]:
+                    print("\n")
+                    print(args.dataset, model, label)
+                    args.label = label
+                    print_acc, print_eff, print_cme = analyze_res(args, i_th_experiment, added_string = pre_defined_added_string[model])
+                    all_acc[dataset + ' ' + model] = print_acc
+                    all_eff[dataset + ' ' + model] = print_eff
+                    all_cme[dataset + ' ' + model] = print_cme
+        csv.writer(open('acc' + i_th_experiment, 'w', newline='')).writerows([all_acc.keys()] + list(zip(*all_acc.values())))
+        csv.writer(open('eff' + i_th_experiment, 'w', newline='')).writerows([all_eff.keys()] + list(zip(*all_eff.values())))
+        csv.writer(open('cme' + i_th_experiment, 'w', newline='')).writerows([all_cme.keys()] + list(zip(*all_cme.values())))
+
+                # total_time_dicts = analyze_res(args, i_th_experiment)
     #         plt.plot(list(total_time_dicts.values()), label = label + " under " + model)
     # plt.xlabel(list(total_time_dicts.keys()))
     # plt.ylabel('Running time')
