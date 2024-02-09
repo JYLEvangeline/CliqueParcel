@@ -11,7 +11,7 @@ import random
 
 pre_defined_added_string= "Return the answer of each question with their numerical itemize.\n " 
 pre_defined_added_string = "Return the answer of each question with their numerical itemize. You must return with numerical itemize!! Remember to start the answer of each question with 1. xxx\n 2. xxx\n ... \n "# new dataset gpt 3.5
-openai.api_key= "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"
+openai.api_key= "YOUR-KEY-HERE"
 datasets.logging.set_verbosity_error()
 datasets.logging.disable_progress_bar()
 def parse_arguments():
