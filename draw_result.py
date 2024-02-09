@@ -33,7 +33,7 @@ def parse_arguments():
 dic_length_of_quires = {'trec': 64, 'squad': 16, 'hotpot_qa': 4}
 dic_length_of_quires = {'trec': 64, 'squad': 16, 'hotpot_qa': 8, 'CSQA': 32, 'GSM8K': 16, 'MATH': 32, 'ANLI': 4, 'MMLU': 16} # hotpotqa 8 or 4?
 modes =["seperate", "group", "random", "full_random", "semantic_sim", "concept_plus_semantic_sim", "avg_length", "maximum_diff", 'random_plus_avg_length'] # remove semantic sim debug
-tmp_modes = "CC & SC     & RC & SSC  & CpSC & ALC    & MDC & SpALC".split('&')
+tmp_modes = "CC & RC & SSC  & CpSC & ALC    & MDC & SpALC".split('&')
 tmp_modes = [m.strip() for m in tmp_modes]
 seperate_index = modes.index('seperate')
 key_for_label = {"coarse_label": 6, "fine_label": 50}
@@ -130,7 +130,7 @@ def ratio_bar():
     plt.close()
 
 def heatmap(correlation_matrix, file_name):
-    tmp_modes = "CC & SC     & RC & SSC  & CpSC & ALC    & MDC & SpALC".split('&')
+    tmp_modes = "CC &  RC & SSC  & CpSC & ALC    & MDC & SpALC".split('&')
     tmp_modes = [m.strip() for m in tmp_modes]
     file_name = file_name.replace(".","_")
     plt.figure(figsize=(8, 6))
